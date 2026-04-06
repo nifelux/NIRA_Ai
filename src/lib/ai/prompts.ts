@@ -1,3 +1,3 @@
-export function getNiraSystemPrompt(mode?: string): string {
+export function getNiraSystemPrompt(_mode?: string): string {
   return "";
 }
