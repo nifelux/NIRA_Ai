@@ -3,27 +3,35 @@
 export function cleanAIResponse(text: string): string {
   if (!text) return "";
 
-  return text
-    // remove scaffold lines completely
-    .replace(/^.*(Role:|Goal:|Plan:|Greeting:|Purpose:|Tone:).*$/gim, "")
-    .replace(/^.*(Definition:|Structure:|Results:|Closing:).*$/gim, "")
+  let cleaned = text.trim();
 
-    // remove inline labels
-    .replace(/Role:\s*/gi, "")
-    .replace(/Goal:\s*/gi, "")
-    .replace(/Plan:\s*/gi, "")
-    .replace(/Definition:\s*/gi, "")
-    .replace(/Structure:\s*/gi, "")
-    .replace(/Results:\s*/gi, "")
-    .replace(/Closing:\s*/gi, "")
+  // Remove obvious prompt/instruction leakage
+  cleaned = cleaned.replace(/^(role|goal|plan|rules?)\s*:\s*.*$/gim, "");
+  cleaned = cleaned.replace(/^you are nira ai.*$/gim, "");
+  cleaned = cleaned.replace(/^nira ai\s*\(.*?\).*$/gim, "");
 
-    // remove markdown junk
-    .replace(/#{1,6}\s*/g, "")
-    .replace(/\*\*/g, "")
-    .replace(/\*/g, "")
+  // Remove common paraphrased instruction fragments at the beginning
+  cleaned = cleaned.replace(
+    /^(natural,\s*clear,\s*simple human language[,.\s-]*)/i,
+    ""
+  );
+  cleaned = cleaned.replace(
+    /^(clear,\s*calm,\s*helpful teaching assistant[,.\s-]*)/i,
+    ""
+  );
+  cleaned = cleaned.replace(
+    /^(do not mention.*?return only the answer\.?\s*)/i,
+    ""
+  );
 
-    // clean spacing
-    .replace(/\n{2,}/g, "\n\n")
-    .replace(/\s+/g, " ")
-    .trim();
+  // Remove markdown-style headings
+  cleaned = cleaned.replace(/^#{1,6}\s+/gm, "");
+
+  // Remove bold markers
+  cleaned = cleaned.replace(/\*\*(.*?)\*\*/g, "$1");
+
+  // Collapse excessive blank lines
+  cleaned = cleaned.replace(/\n{3,}/g, "\n\n").trim();
+
+  return cleaned;
 }

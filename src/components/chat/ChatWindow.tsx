@@ -1,65 +1,61 @@
-// src/components/chat/ChatWindow.tsx
-
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import ChatHeader from "./ChatHeader";
-import ChatInput from "./ChatInput";
-import ChatMessage from "./ChatMessage";
-import ChatTyping from "./ChatTyping";
-import type { ChatMessage as ChatMessageType } from "@/lib/types/chat";
+import { useState } from "react";
+
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
 
 export default function ChatWindow() {
-  const [messages, setMessages] = useState<ChatMessageType[]>([]);
+  const [input, setInput] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const bottomRef = useRef<HTMLDivElement | null>(null);
+  async function sendMessage() {
+    const trimmed = input.trim();
+    if (!trimmed || loading) return;
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading]);
-
-  async function handleSend(message: string) {
-    if (!message.trim()) return;
-
-    const userMessage: ChatMessageType = {
+    const userMessage: ChatMessage = {
       role: "user",
-      content: message,
+      content: trimmed,
     };
 
-    const nextMessages: ChatMessageType[] = [...messages, userMessage];
-
-    setMessages(nextMessages);
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
     setLoading(true);
 
     try {
-      const response = await fetch("/api/chat", {
+      const res = await fetch("/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          message,
+          message: trimmed,
           mode: "study",
-          messages: [], // keep history off for now
         }),
       });
 
-      const data = await response.json();
+      const data = await res.json();
 
-      const assistantMessage: ChatMessageType = {
+      const assistantMessage: ChatMessage = {
         role: "assistant",
         content:
-          data?.message ?? "NIRA could not generate a response right now.",
+          typeof data?.message === "string"
+            ? data.message
+            : "No response generated.",
       };
 
-      setMessages([...nextMessages, assistantMessage]);
-    } catch {
-      setMessages([
-        ...nextMessages,
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error("Chat request failed:", error);
+
+      setMessages((prev) => [
+        ...prev,
         {
           role: "assistant",
-          content: "NIRA could not connect right now. Please try again.",
+          content: "Something went wrong. Please try again.",
         },
       ]);
     } finally {
@@ -68,28 +64,50 @@ export default function ChatWindow() {
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <ChatHeader />
+    <div className="flex flex-col gap-4">
+      <div className="space-y-3">
+        {messages.map((message, index) => (
+          <div
+            key={index}
+            className={
+              message.role === "user"
+                ? "ml-auto max-w-[85%] rounded-2xl bg-blue-600 px-4 py-3 text-white"
+                : "max-w-[85%] rounded-2xl bg-white/10 px-4 py-3 text-white"
+            }
+          >
+            {message.content}
+          </div>
+        ))}
 
-      <div className="flex-1 space-y-4 overflow-y-auto px-4 py-6">
-        {messages.map((msg, index) => {
-          if (msg.role === "system") return null;
-
-          return (
-            <ChatMessage
-              key={index}
-              role={msg.role}
-              content={msg.content}
-            />
-          );
-        })}
-
-        {loading && <ChatTyping />}
-
-        <div ref={bottomRef} />
+        {loading ? (
+          <div className="max-w-[85%] rounded-2xl bg-white/10 px-4 py-3 text-white">
+            Thinking...
+          </div>
+        ) : null}
       </div>
 
-      <ChatInput onSend={handleSend} disabled={loading} />
+      <div className="flex items-center gap-2">
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              void sendMessage();
+            }
+          }}
+          placeholder="Ask NIRA anything..."
+          className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none"
+        />
+        <button
+          onClick={() => {
+            void sendMessage();
+          }}
+          disabled={loading}
+          className="rounded-xl bg-blue-600 px-4 py-3 text-white disabled:opacity-50"
+        >
+          Send
+        </button>
+      </div>
     </div>
   );
 }

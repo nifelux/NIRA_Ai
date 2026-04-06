@@ -1,17 +1,18 @@
-// src/lib/ai/router.ts
-
 import { generateGemmaResponse } from "@/lib/ai/GemmaClient";
 import { cleanAIResponse } from "@/lib/ai/LlmResponseCleaner";
 
-export async function handleAIRequest(message: string) {
-  try {
-    const raw = await generateGemmaResponse(message);
+type NiraMode = "study" | "career";
 
-    const cleaned = cleanAIResponse(raw);
+export async function handleAIRequest(
+  message: string,
+  mode: NiraMode = "study"
+): Promise<string> {
+  const safeMessage = typeof message === "string" ? message.trim() : "";
 
-    return cleaned;
-  } catch (err) {
-    console.error("Router error:", err);
-    return "Something went wrong. Please try again.";
+  if (!safeMessage) {
+    return "Please enter a message.";
   }
+
+  const raw = await generateGemmaResponse(safeMessage, mode);
+  return cleanAIResponse(raw);
 }
