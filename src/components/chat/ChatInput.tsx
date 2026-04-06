@@ -1,42 +1,46 @@
+// src/components/chat/ChatInput.tsx
+
 "use client";
 
 import { useState } from "react";
-import Button from "@/components/ui/Button";
 
-export default function ChatInput({
-  onSend,
-}: {
-  onSend: (msg: string) => void;
-}) {
-  const [value, setValue] = useState("");
+type Props = {
+  onSend: (message: string) => void;
+  disabled?: boolean; // ✅ ADD THIS
+};
 
-  function handleSend() {
-    if (!value.trim()) return;
+export default function ChatInput({ onSend, disabled }: Props) {
+  const [message, setMessage] = useState("");
 
-    onSend(value);
-    setValue("");
-  }
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!message.trim() || disabled) return;
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleSend();
-    }
+    onSend(message);
+    setMessage("");
   }
 
   return (
-    <div className="border-t border-white/10 p-3">
-      <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 focus-within:border-blue-500/40">
-        <input
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Ask NIRA anything..."
-          className="flex-1 bg-transparent px-2 py-2 text-sm text-white outline-none placeholder:text-slate-500"
-        />
+    <form
+      onSubmit={handleSubmit}
+      className="flex items-center gap-3 border-t border-white/10 p-4"
+    >
+      <input
+        type="text"
+        placeholder="Ask NIRA anything..."
+        value={message}
+        onChange={(e) => setMessage(e.target.value)}
+        disabled={disabled} // ✅ now valid
+        className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none"
+      />
 
-        <Button onClick={handleSend}>Send</Button>
-      </div>
-    </div>
+      <button
+        type="submit"
+        disabled={disabled}
+        className="rounded-xl bg-blue-600 px-5 py-2 font-medium text-white disabled:opacity-50"
+      >
+        Send
+      </button>
+    </form>
   );
 }

@@ -1,3 +1,5 @@
+// src/lib/types/ai.ts
+
 export type AiSource =
   | "knowledge_base"
   | "solver"

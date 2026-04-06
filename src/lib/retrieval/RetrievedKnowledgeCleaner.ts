@@ -1,3 +1,13 @@
-export function cleanRetrievedAnswer(answer: string): string {
-  return answer.trim().replace(/\n{3,}/g, "\n\n");
+// src/lib/retrieval/RetrievedKnowledgeCleaner.ts
+
+export function cleanKnowledge(text: string) {
+  if (!text) return "";
+
+  return text
+    .replace(/\*\*/g, "")
+    .replace(/\*/g, "")
+    .replace(/User says:/gi, "")
+    .replace(/Question:/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }

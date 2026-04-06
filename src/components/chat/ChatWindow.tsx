@@ -1,6 +1,8 @@
+// src/components/chat/ChatWindow.tsx
+
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import ChatHeader from "./ChatHeader";
 import ChatInput from "./ChatInput";
 import ChatMessage from "./ChatMessage";
@@ -13,11 +15,19 @@ export default function ChatWindow() {
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
+
   async function handleSend(message: string) {
-    const nextMessages: ChatMessageType[] = [
-      ...messages,
-      { role: "user", content: message },
-    ];
+    if (!message.trim()) return;
+
+    const userMessage: ChatMessageType = {
+      role: "user",
+      content: message,
+    };
+
+    const nextMessages: ChatMessageType[] = [...messages, userMessage];
 
     setMessages(nextMessages);
     setLoading(true);
@@ -31,20 +41,19 @@ export default function ChatWindow() {
         body: JSON.stringify({
           message,
           mode: "study",
-          messages,
+          messages: [], // keep history off for now
         }),
       });
 
       const data = await response.json();
 
-      setMessages([
-        ...nextMessages,
-        {
-          role: "assistant",
-          content:
-            data?.message ?? "NIRA could not generate a response right now.",
-        },
-      ]);
+      const assistantMessage: ChatMessageType = {
+        role: "assistant",
+        content:
+          data?.message ?? "NIRA could not generate a response right now.",
+      };
+
+      setMessages([...nextMessages, assistantMessage]);
     } catch {
       setMessages([
         ...nextMessages,
@@ -58,31 +67,29 @@ export default function ChatWindow() {
     }
   }
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading]);
-
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-[30px] border border-white/10 bg-white/5 backdrop-blur">
+    <div className="flex h-full flex-col">
       <ChatHeader />
 
-      <div className="flex-1 space-y-5 overflow-y-auto px-4 py-5">
-        {messages.length === 0 && (
-          <div className="flex h-full items-center justify-center text-sm text-slate-400">
-            Ask NIRA anything. Start learning.
-          </div>
-        )}
+      <div className="flex-1 space-y-4 overflow-y-auto px-4 py-6">
+        {messages.map((msg, index) => {
+          if (msg.role === "system") return null;
 
-        {messages.map((msg, i) => (
-          <ChatMessage key={i} role={msg.role} content={msg.content} />
-        ))}
+          return (
+            <ChatMessage
+              key={index}
+              role={msg.role}
+              content={msg.content}
+            />
+          );
+        })}
 
         {loading && <ChatTyping />}
 
         <div ref={bottomRef} />
       </div>
 
-      <ChatInput onSend={handleSend} />
+      <ChatInput onSend={handleSend} disabled={loading} />
     </div>
   );
 }

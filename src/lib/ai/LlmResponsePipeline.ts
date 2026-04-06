@@ -10,6 +10,7 @@ export function runLlmResponsePipeline(
   rawResponse: AiRawResponse
 ): AiPipelineResult {
   const formatted = formatAiResponse(rawResponse);
+
   const sanitizedContent = sanitizeAiOutput(formatted.content);
 
   const validation = validateAiResponse({

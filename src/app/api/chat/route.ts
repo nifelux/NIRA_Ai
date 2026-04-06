@@ -1,57 +1,23 @@
 // src/app/api/chat/route.ts
 
 import { NextResponse } from "next/server";
-import { routeAiRequest } from "@/lib/ai/router";
-import type { ChatRequestBody, ChatResponseBody } from "@/lib/types/chat";
+import { handleAIRequest } from "@/lib/ai/router";
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
-    const body = (await request.json()) as ChatRequestBody;
-
-    const message = body.message?.trim();
-    const mode = body.mode === "career" ? "career" : "study";
-    const messages = body.messages ?? [];
+    const { message } = await req.json();
 
     if (!message) {
-      return NextResponse.json(
-        {
-          ok: false,
-          message: "Message is required.",
-          source: "fallback",
-          mode,
-        } satisfies ChatResponseBody,
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "No message provided" });
     }
 
-    const result = await routeAiRequest({
-      message,
-      mode,
-      messages,
-    });
+    const response = await handleAIRequest(message);
 
+    return NextResponse.json({ message: response });
+  } catch (err) {
+    console.error(err);
     return NextResponse.json({
-      ok: true,
-      message: result.content,
-      source: result.source,
-      mode,
-    } satisfies ChatResponseBody);
-  } catch (error) {
-    console.error("API /chat error full object:", error);
-
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Something went wrong while processing your request.";
-
-    return NextResponse.json(
-      {
-        ok: false,
-        message,
-        source: "fallback",
-        mode: "study",
-      } satisfies ChatResponseBody,
-      { status: 500 }
-    );
+      message: "Server error. Please try again.",
+    });
   }
 }
