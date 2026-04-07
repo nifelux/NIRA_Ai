@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { handleAIRequest } from "@/lib/ai/router";
+import type { NiraMode } from "@/lib/ai/types";
 
 export async function POST(req: Request) {
   try {
@@ -12,7 +13,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const safeMode = mode === "career" ? "career" : "study";
+    const safeMode: NiraMode = mode === "career" ? "career" : "study";
     const response = await handleAIRequest(message, safeMode);
 
     return NextResponse.json({ message: response });

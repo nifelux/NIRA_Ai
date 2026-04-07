@@ -1,7 +1,6 @@
 import { generateGemmaResponse } from "@/lib/ai/GemmaClient";
 import { cleanAIResponse } from "@/lib/ai/LlmResponseCleaner";
-
-type NiraMode = "study" | "career";
+import type { NiraMode } from "@/lib/ai/types";
 
 export async function handleAIRequest(
   message: string,

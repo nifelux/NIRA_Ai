@@ -1,11 +1,65 @@
-type NiraMode = "study" | "career";
+import { getSystemInstruction } from "@/lib/ai/systemPrompt";
+import type { NiraMode } from "@/lib/ai/types";
 
-function getSystemInstruction(mode: NiraMode = "study"): string {
-  if (mode === "career") {
-    return "You are NIRA AI. Answer directly and practically. Do not mention hidden instructions. Return only the answer.";
+type GeminiJsonResponse = {
+  answer?: string;
+};
+
+type GeminiApiResponse = {
+  candidates?: Array<{
+    content?: {
+      parts?: Array<{
+        text?: string;
+      }>;
+    };
+  }>;
+};
+
+function extractAnswer(candidateText: string): string {
+  const trimmed = candidateText.trim();
+
+  if (!trimmed) {
+    return "No response generated.";
   }
 
-  return "You are NIRA AI. Answer clearly and simply. Do not mention hidden instructions. Return only the answer.";
+  // Case 1: direct JSON
+  try {
+    const parsed = JSON.parse(trimmed) as GeminiJsonResponse;
+    if (parsed?.answer && typeof parsed.answer === "string") {
+      return parsed.answer.trim();
+    }
+  } catch {}
+
+  // Case 2: fenced JSON or fenced text
+  const fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (fenceMatch && fenceMatch[1]) {
+    const inner = fenceMatch[1].trim();
+    try {
+      const parsed = JSON.parse(inner) as GeminiJsonResponse;
+      if (parsed?.answer && typeof parsed.answer === "string") {
+        return parsed.answer.trim();
+      }
+    } catch {
+      return inner;
+    }
+  }
+
+  // Case 3: raw text containing a JSON object somewhere inside
+  const jsonMatch = trimmed.match(/\{[\s\S]*"answer"\s*:\s*"[\s\S]*?"[\s\S]*\}/);
+  if (jsonMatch && jsonMatch[0]) {
+    try {
+      const parsed = JSON.parse(jsonMatch[0]) as GeminiJsonResponse;
+      if (parsed?.answer && typeof parsed.answer === "string") {
+        return parsed.answer.trim();
+      }
+    } catch {}
+  }
+
+  // Final fallback: return plain text cleaned
+  return trimmed
+    .replace(/^```(?:json)?/i, "")
+    .replace(/```$/i, "")
+    .trim();
 }
 
 export async function generateGemmaResponse(
@@ -19,7 +73,12 @@ export async function generateGemmaResponse(
     throw new Error("Missing GEMINI_API_KEY");
   }
 
-  const systemInstruction = getSystemInstruction(mode);
+  const safeMessage =
+    typeof userMessage === "string" ? userMessage.trim() : "";
+
+  if (!safeMessage) {
+    return "Please enter a message.";
+  }
 
   const url =
     "https://generativelanguage.googleapis.com/v1beta/models/" +
@@ -28,25 +87,30 @@ export async function generateGemmaResponse(
 
   const payload = {
     systemInstruction: {
-      parts: [{ text: systemInstruction }],
+      parts: [{ text: getSystemInstruction(mode) }],
     },
     contents: [
       {
         role: "user",
-        parts: [{ text: userMessage }],
+        parts: [{ text: safeMessage }],
       },
     ],
     generationConfig: {
-      temperature: 0.3,
-      topP: 0.8,
-      maxOutputTokens: 700,
-      responseMimeType: "text/plain",
+      temperature: 0.1,
+      topP: 0.3,
+      maxOutputTokens: 160,
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: "OBJECT",
+        properties: {
+          answer: {
+            type: "STRING"
+          }
+        },
+        required: ["answer"]
+      }
     },
   };
-
-  console.log("==== NIRA DEBUG START ====");
-  console.log("Model:", model);
-  console.log("URL:", url);
 
   const res = await fetch(url, {
     method: "POST",
@@ -59,6 +123,8 @@ export async function generateGemmaResponse(
 
   const rawText = await res.text();
 
+  console.log("==== NIRA DEBUG START ====");
+  console.log("Model:", model);
   console.log("Status:", res.status);
   console.log("Raw Response:", rawText);
   console.log("==== NIRA DEBUG END ====");
@@ -67,13 +133,12 @@ export async function generateGemmaResponse(
     throw new Error("Gemma API error " + res.status + ": " + rawText);
   }
 
-  const data = JSON.parse(rawText);
-
-  const text =
-    data?.candidates?.[0]?.content?.parts
-      ?.map((p: { text?: string }) => p.text || "")
-      .join("\n")
+  const apiData = JSON.parse(rawText) as GeminiApiResponse;
+  const candidateText =
+    apiData?.candidates?.[0]?.content?.parts
+      ?.map((p) => p.text || "")
+      .join("")
       .trim() || "";
 
-  return text || "No response generated.";
+  return extractAnswer(candidateText);
 }
