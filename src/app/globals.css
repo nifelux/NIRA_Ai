@@ -1,21 +1,41 @@
 @import "tailwindcss";
 
-/* ===== NIRA DESIGN SYSTEM ===== */
-
+/* =========================
+   NIRA Design Tokens
+   ========================= */
 :root {
-  --bg: #020617;
-  --surface: #0f172a;
-  --surface-2: #111827;
+  --background: #020617;
+  --background-soft: #081120;
+  --surface: rgba(15, 23, 42, 0.72);
+  --surface-strong: rgba(15, 23, 42, 0.92);
+  --surface-muted: rgba(255, 255, 255, 0.04);
+
+  --foreground: #f8fafc;
+  --muted: #94a3b8;
+  --muted-2: #64748b;
+
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+
   --primary: #2563eb;
   --primary-soft: #3b82f6;
-  --text: #f8fafc;
-  --muted: #94a3b8;
+  --primary-glow: rgba(37, 99, 235, 0.22);
+
   --danger: #ef4444;
-  --border: rgba(255, 255, 255, 0.08);
+  --danger-glow: rgba(239, 68, 68, 0.16);
+
+  --shadow-soft: 0 12px 40px -18px rgba(0, 0, 0, 0.55);
+  --shadow-strong: 0 30px 90px -35px rgba(0, 0, 0, 0.82);
+  --shadow-blue: 0 18px 60px -28px rgba(37, 99, 235, 0.55);
+
+  --radius-card: 28px;
+  --radius-panel: 34px;
+  --radius-pill: 999px;
 }
 
-/* ===== RESET ===== */
-
+/* =========================
+   Reset
+   ========================= */
 *,
 *::before,
 *::after {
@@ -25,11 +45,27 @@
 html,
 body {
   min-height: 100%;
-  background: var(--bg);
-  color: var(--text);
   margin: 0;
   padding: 0;
-  font-family: Arial, Helvetica, sans-serif;
+  background:
+    radial-gradient(circle at top, rgba(37, 99, 235, 0.16), transparent 28%),
+    linear-gradient(180deg, #020617 0%, #07101d 45%, #020617 100%);
+  color: var(--foreground);
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  scroll-behavior: smooth;
+}
+
+body {
+  overflow-x: hidden;
 }
 
 a {
@@ -44,17 +80,295 @@ select {
   font: inherit;
 }
 
-/* ===== ROOT ===== */
+img,
+svg,
+video {
+  display: block;
+  max-width: 100%;
+}
 
 #__next,
 #root {
   min-height: 100%;
 }
 
-/* ===== CUSTOM UTIL ===== */
+/* =========================
+   Scrollbar
+   ========================= */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
 
-.glass {
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(10px);
+::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.45);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* =========================
+   Typography Helpers
+   ========================= */
+.nira-display {
+  font-size: clamp(2.6rem, 5vw, 5.2rem);
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+  font-weight: 800;
+}
+
+.nira-title {
+  font-size: clamp(1.5rem, 2vw, 2.25rem);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  font-weight: 700;
+}
+
+.nira-subtitle {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+.nira-label {
+  font-size: 0.78rem;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+
+/* =========================
+   Surface System
+   ========================= */
+.nira-glass {
+  background: var(--surface);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   border: 1px solid var(--border);
+  box-shadow: var(--shadow-soft);
+}
+
+.nira-glass-strong {
+  background: var(--surface-strong);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-strong);
+}
+
+.nira-card {
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-soft);
+}
+
+.nira-panel {
+  border-radius: var(--radius-panel);
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-strong);
+}
+
+.nira-soft-block {
+  border-radius: 24px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+}
+
+/* =========================
+   Accent Utilities
+   ========================= */
+.nira-primary-glow {
+  box-shadow:
+    0 0 0 1px rgba(37, 99, 235, 0.16),
+    0 18px 60px -28px rgba(37, 99, 235, 0.55);
+}
+
+.nira-danger-glow {
+  box-shadow:
+    0 0 0 1px rgba(239, 68, 68, 0.16),
+    0 18px 60px -28px rgba(239, 68, 68, 0.38);
+}
+
+.nira-gradient-text {
+  background: linear-gradient(90deg, #ffffff 0%, #bfdbfe 45%, #60a5fa 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* =========================
+   Button Base
+   ========================= */
+.nira-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  border-radius: 20px;
+  padding: 0.9rem 1.2rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition:
+    transform 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease,
+    opacity 180ms ease;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.nira-button:hover {
+  transform: translateY(-1px);
+}
+
+.nira-button:active {
+  transform: translateY(0);
+}
+
+.nira-button:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.nira-button-primary {
+  color: white;
+  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
+  box-shadow: var(--shadow-blue);
+}
+
+.nira-button-primary:hover {
+  background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.nira-button-secondary {
+  color: var(--foreground);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border);
+}
+
+.nira-button-secondary:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.nira-button-danger {
+  color: white;
+  background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 18px 60px -28px rgba(239, 68, 68, 0.45);
+}
+
+.nira-button-danger:hover {
+  background: linear-gradient(180deg, #f87171 0%, #ef4444 100%);
+}
+
+/* =========================
+   Input Base
+   ========================= */
+.nira-input {
+  width: 100%;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--foreground);
+  padding: 0.95rem 1rem;
+  outline: none;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.nira-input::placeholder {
+  color: var(--muted-2);
+}
+
+.nira-input:focus {
+  border-color: rgba(59, 130, 246, 0.55);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow:
+    0 0 0 4px rgba(37, 99, 235, 0.12),
+    0 10px 30px -16px rgba(37, 99, 235, 0.35);
+}
+
+/* =========================
+   Badge / Chip
+   ========================= */
+.nira-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.55rem 0.9rem;
+  font-size: 0.82rem;
+  color: #dbeafe;
+  backdrop-filter: blur(10px);
+}
+
+/* =========================
+   Layout Helpers
+   ========================= */
+.nira-page-shell {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.nira-page-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.14), transparent 26%),
+    radial-gradient(circle at bottom right, rgba(239, 68, 68, 0.08), transparent 22%);
+  pointer-events: none;
+}
+
+.nira-container {
+  position: relative;
+  width: min(100%, 80rem);
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .nira-container {
+    padding-inline: 2rem;
+  }
+}
+
+/* =========================
+   Motion
+   ========================= */
+.nira-hover-lift {
+  transition:
+    transform 200ms ease,
+    border-color 200ms ease,
+    box-shadow 200ms ease,
+    background-color 200ms ease;
+}
+
+.nira-hover-lift:hover {
+  transform: translateY(-2px);
+  border-color: rgba(59, 130, 246, 0.2);
+  box-shadow: 0 24px 70px -32px rgba(0, 0, 0, 0.75);
+}
+
+/* =========================
+   Legacy alias support
+   ========================= */
+.glass {
+  background: var(--surface);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-soft);
 }

@@ -1,33 +1,33 @@
-import type { AiFormattedResponse, AiValidationResult } from "@/lib/types/ai";
+// src/lib/ai/validator.ts
+
+export interface AiValidationResult {
+  valid: boolean;
+  reason?: string;
+}
 
 const blockedPhrases = [
   "as an ai language model",
-  "i can't browse",
-  "i cannot browse",
-  "i do not have access",
+  "i am just an ai",
+  "i cannot provide that",
 ];
 
-export function validateAiResponse(
-  response: AiFormattedResponse
-): AiValidationResult {
-  const text = response.content.trim().toLowerCase();
-
-  if (!text) {
+export function validateResponse(text: string): AiValidationResult {
+  if (!text || text.trim().length < 2) {
     return {
       valid: false,
-      reason: "Empty response",
+      reason: "Empty or too short",
     };
   }
 
-  const hasBlockedPhrase = blockedPhrases.some((phrase) =>
-    text.includes(phrase)
-  );
+  const lowered = text.toLowerCase();
 
-  if (hasBlockedPhrase) {
-    return {
-      valid: false,
-      reason: "Contains blocked generic AI phrasing",
-    };
+  for (const phrase of blockedPhrases) {
+    if (lowered.includes(phrase)) {
+      return {
+        valid: false,
+        reason: "Blocked phrase detected",
+      };
+    }
   }
 
   return {

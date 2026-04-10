@@ -1,35 +1,17 @@
 // src/lib/types/ai.ts
 
-export type AiSource =
-  | "knowledge_base"
-  | "solver"
-  | "examples"
-  | "retrieved_knowledge"
-  | "free_source"
-  | "gemma"
-  | "gemini"
-  | "deepseek"
-  | "openai"
-  | "fallback";
+export type AiMode = "study" | "career";
 
-export interface AiRawResponse {
+export type AiRole = "user" | "assistant" | "system";
+
+export interface AiMessage {
+  role: AiRole;
   content: string;
-  source: AiSource;
 }
 
-export interface AiFormattedResponse {
-  content: string;
-  source: AiSource;
-}
-
-export interface AiValidationResult {
-  valid: boolean;
-  reason?: string;
-}
-
-export interface AiPipelineResult {
-  content: string;
-  source: AiSource;
-  shouldStore: boolean;
-  qualityScore: number;
+export interface AiResponse {
+  message: string;
+  mode: AiMode;
+  model?: string;
+  fallbackUsed?: boolean;
 }

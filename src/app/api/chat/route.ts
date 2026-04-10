@@ -1,28 +1,42 @@
+// src/app/api/chat/route.ts
+
 import { NextResponse } from "next/server";
 import { handleAIRequest } from "@/lib/ai/router";
-import type { NiraMode } from "@/lib/ai/types";
 
 export async function POST(req: Request) {
   try {
-    const { message, mode } = await req.json();
+    const { message, mode, sessionId } = await req.json();
 
     if (!message || typeof message !== "string") {
-      return NextResponse.json(
-        { message: "No message provided" },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "No message provided." }, { status: 400 });
     }
 
-    const safeMode: NiraMode = mode === "career" ? "career" : "study";
-    const response = await handleAIRequest(message, safeMode);
+    const resolvedMode = mode === "career" ? "career" : "study";
+    const safeSessionId =
+      typeof sessionId === "string" && sessionId.trim()
+        ? sessionId.trim()
+        : "temp_session";
 
-    return NextResponse.json({ message: response });
-  } catch (err) {
-    console.error("Chat route error:", err);
+    const result = await handleAIRequest(
+      message,
+      resolvedMode,
+      safeSessionId
+    );
+
+    return NextResponse.json({
+      message: result.message,
+      mode: resolvedMode,
+      model: result.model,
+      fallbackUsed: result.fallbackUsed,
+    });
+  } catch (error) {
+    console.error("Chat API error:", error);
 
     return NextResponse.json(
       {
-        message: err instanceof Error ? err.message : "Unknown server error",
+        message: "Server error. Please try again.",
+        model: "gemma",
+        fallbackUsed: true,
       },
       { status: 500 }
     );
