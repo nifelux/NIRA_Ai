@@ -11,7 +11,7 @@ import ChatTyping from "./ChatTyping";
 import type { ChatMessage as ChatMessageType } from "@/lib/types/chat";
 import { getSessionId } from "@/lib/experience/SessionManager";
 
-type ChatMode = "study" | "career";
+type ChatMode = "study" | "career" | "chat";
 
 type StoredMessage = ChatMessageType & {
   id: string;
@@ -23,7 +23,32 @@ function storageKey(sessionId: string, mode: ChatMode) {
 }
 
 function createId() {
-  return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function normalizeMessages(data: unknown): StoredMessage[] {
+  if (!Array.isArray(data)) return [];
+
+  return data
+    .map((msg) => {
+      if (!msg || typeof msg !== "object") return null;
+
+      const m = msg as Partial<StoredMessage>;
+
+      if (!m.content || typeof m.content !== "string") return null;
+      if (m.role !== "user" && m.role !== "assistant") return null;
+
+      return {
+        id: typeof m.id === "string" ? m.id : createId(),
+        role: m.role,
+        content: m.content,
+        model: typeof m.model === "string" ? m.model : undefined,
+        fallbackUsed: Boolean(m.fallbackUsed),
+        timestamp:
+          typeof m.timestamp === "number" ? m.timestamp : Date.now(),
+      };
+    })
+    .filter(Boolean) as StoredMessage[];
 }
 
 export default function ChatWindow({
@@ -32,138 +57,164 @@ export default function ChatWindow({
   mode?: ChatMode;
 }) {
   const router = useRouter();
-  const [messages, setMessages] = useState<StoredMessage[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [activeModel, setActiveModel] = useState<string>("gemma");
-  const [fallbackUsed, setFallbackUsed] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
-  const sessionId = getSessionId() || "temp";
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+  const [messages, setMessages] = useState<StoredMessage[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [activeModel, setActiveModel] = useState("gemma");
+  const [fallbackUsed, setFallbackUsed] = useState(false);
 
   useEffect(() => {
+    const id = getSessionId() || createId();
+    setSessionId(id);
+    setReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!ready || !sessionId) return;
+
     const key = storageKey(sessionId, mode);
-    const saved = localStorage.getItem(key);
+    const raw = localStorage.getItem(key);
 
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved) as StoredMessage[];
-        const safeMessages = Array.isArray(parsed) ? parsed : [];
-        setMessages(safeMessages);
+    if (!raw) {
+      setMessages([]);
+      setActiveModel("gemma");
+      setFallbackUsed(false);
+      return;
+    }
 
-        const lastAssistant = [...safeMessages]
-          .reverse()
-          .find((msg) => msg.role === "assistant");
+    try {
+      const parsed = JSON.parse(raw);
+      const safe = normalizeMessages(parsed);
 
-        if (lastAssistant?.model) {
-          setActiveModel(lastAssistant.model);
-          setFallbackUsed(Boolean(lastAssistant.fallbackUsed));
-        } else {
-          setActiveModel("gemma");
-          setFallbackUsed(false);
-        }
-      } catch {
-        setMessages([]);
+      setMessages(safe);
+
+      const last = [...safe].reverse().find((m) => m.role === "assistant");
+
+      if (last?.model) {
+        setActiveModel(last.model);
+        setFallbackUsed(Boolean(last.fallbackUsed));
+      } else {
         setActiveModel("gemma");
         setFallbackUsed(false);
       }
-    } else {
+    } catch {
       setMessages([]);
       setActiveModel("gemma");
       setFallbackUsed(false);
     }
-  }, [mode, sessionId]);
+  }, [mode, sessionId, ready]);
 
   useEffect(() => {
+    if (!ready || !sessionId) return;
+
     const key = storageKey(sessionId, mode);
     localStorage.setItem(key, JSON.stringify(messages));
-  }, [messages, mode, sessionId]);
+  }, [messages, mode, sessionId, ready]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  async function handleSend(message: string) {
-    if (!message.trim() || loading) return;
+  async function handleSend(text: string) {
+    if (!text.trim() || loading || !sessionId) return;
 
-    const userMessage: StoredMessage = {
+    const userMsg: StoredMessage = {
       id: createId(),
       role: "user",
-      content: message,
+      content: text,
       timestamp: Date.now(),
     };
 
-    const nextMessages: StoredMessage[] = [...messages, userMessage];
-    setMessages(nextMessages);
+    const next = [...messages, userMsg];
+    setMessages(next);
     setLoading(true);
 
     try {
-      const response = await fetch("/api/chat", {
+      const res = await fetch("/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          message,
-          mode,
-          sessionId,
-        }),
+        body: JSON.stringify({ message: text, mode, sessionId }),
       });
 
-      const data = await response.json();
+      const data = await res.json();
 
-      const assistantMessage: StoredMessage = {
+      const aiMsg: StoredMessage = {
         id: createId(),
         role: "assistant",
-        content:
-          data?.message ?? "NIRA could not generate a response right now.",
-        model: data?.model ?? "gemma",
+        content: data?.message || "No response",
+        model: data?.model || "gemma",
         fallbackUsed: Boolean(data?.fallbackUsed),
         timestamp: Date.now(),
       };
 
-      setActiveModel(assistantMessage.model || "gemma");
-      setFallbackUsed(Boolean(assistantMessage.fallbackUsed));
-      setMessages([...nextMessages, assistantMessage]);
+      setActiveModel(aiMsg.model || "gemma");
+      setFallbackUsed(Boolean(aiMsg.fallbackUsed));
+      setMessages([...next, aiMsg]);
     } catch {
-      const fallbackMessage: StoredMessage = {
-        id: createId(),
-        role: "assistant",
-        content: "NIRA could not connect right now. Please try again.",
-        model: "gemma",
-        fallbackUsed: true,
-        timestamp: Date.now(),
-      };
-
+      setMessages([
+        ...next,
+        {
+          id: createId(),
+          role: "assistant",
+          content: "Connection failed. Try again.",
+          model: "gemma",
+          fallbackUsed: true,
+          timestamp: Date.now(),
+        },
+      ]);
       setActiveModel("gemma");
       setFallbackUsed(true);
-      setMessages([...nextMessages, fallbackMessage]);
     } finally {
       setLoading(false);
     }
   }
 
-  function handleModeChange(nextMode: ChatMode) {
-    if (nextMode === mode) return;
-    router.push(`/chat?mode=${nextMode}`);
+  function deleteMsg(id: string) {
+    setMessages((prev) => prev.filter((m) => m.id !== id));
   }
 
-  function handleDeleteMessage(messageId: string) {
-    setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
+  function switchMode(m: ChatMode) {
+    if (m !== mode) router.push(`/chat?mode=${m}`);
   }
 
   const isEmpty = messages.length === 0 && !loading;
+
+  function emptyTitle() {
+    if (mode === "career") return "Start a career conversation with NIRA";
+    if (mode === "chat") return "Start a general conversation with NIRA";
+    return "Start a study conversation with NIRA";
+  }
+
+  function emptySubtitle() {
+    if (mode === "career") {
+      return "Ask about skills, growth paths, university direction, freelancing, and practical career development.";
+    }
+    if (mode === "chat") {
+      return "Ask general questions, mix study and career topics, or chat more freely with NIRA.";
+    }
+    return "Ask about school topics, explanations, examples, revision, and guided learning.";
+  }
 
   return (
     <div className="nira-panel flex h-[calc(100vh-10rem)] flex-col overflow-hidden">
       <ChatHeader
         mode={mode}
-        onModeChange={handleModeChange}
-        activeModel={activeModel}
-        fallbackUsed={fallbackUsed}
+        onModeChange={switchMode}
+        
+        
       />
 
       <div className="relative flex-1 overflow-y-auto px-4 py-5 md:px-6">
-        {isEmpty ? (
+        {!ready ? (
+          <div className="flex h-full items-center justify-center text-sm text-slate-400">
+            Loading chat...
+          </div>
+        ) : isEmpty ? (
           <div className="flex h-full items-center justify-center">
             <div className="mx-auto max-w-2xl text-center">
               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-500/12 text-blue-300 shadow-[0_0_0_1px_rgba(37,99,235,0.18)]">
@@ -171,15 +222,11 @@ export default function ChatWindow({
               </div>
 
               <h2 className="text-2xl font-bold tracking-tight text-white md:text-3xl">
-                {mode === "career"
-                  ? "Start a career conversation with NIRA"
-                  : "Start a study conversation with NIRA"}
+                {emptyTitle()}
               </h2>
 
               <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-slate-400 md:text-base">
-                {mode === "career"
-                  ? "Ask about skills, growth paths, tech direction, freelancing, and practical development."
-                  : "Ask about school topics, explanations, examples, revision, and guided learning."}
+                {emptySubtitle()}
               </p>
 
               <div className="mt-8 grid gap-3 sm:grid-cols-3">
@@ -215,6 +262,38 @@ export default function ChatWindow({
                       <p className="mt-1 text-xs text-slate-400">Direction support</p>
                     </button>
                   </>
+                ) : mode === "chat" ? (
+                  <>
+                    <button
+                      onClick={() => handleSend("Barcelona vs Real Madrid")}
+                      className="nira-soft-block nira-hover-lift px-4 py-4 text-left"
+                    >
+                      <p className="text-sm font-medium text-white">
+                        Barcelona vs Real Madrid
+                      </p>
+                      <p className="mt-1 text-xs text-slate-400">General question</p>
+                    </button>
+
+                    <button
+                      onClick={() => handleSend("Help me combine study and career planning")}
+                      className="nira-soft-block nira-hover-lift px-4 py-4 text-left"
+                    >
+                      <p className="text-sm font-medium text-white">
+                        Combine study and career planning
+                      </p>
+                      <p className="mt-1 text-xs text-slate-400">Mixed guidance</p>
+                    </button>
+
+                    <button
+                      onClick={() => handleSend("What is happening in tech this year?")}
+                      className="nira-soft-block nira-hover-lift px-4 py-4 text-left"
+                    >
+                      <p className="text-sm font-medium text-white">
+                        What is happening in tech this year?
+                      </p>
+                      <p className="mt-1 text-xs text-slate-400">Broader assistant</p>
+                    </button>
+                  </>
                 ) : (
                   <>
                     <button
@@ -232,7 +311,7 @@ export default function ChatWindow({
                       <p className="text-sm font-medium text-white">
                         Explain photosynthesis simply
                       </p>
-                      <p className="mt-1 text-xs text-slate-400">Easy teaching flow</p>
+      <p className="mt-1 text-xs text-slate-400">Easy teaching flow</p>
                     </button>
 
                     <button
@@ -261,7 +340,7 @@ export default function ChatWindow({
                   content={msg.content}
                   model={msg.model}
                   fallbackUsed={msg.fallbackUsed}
-                  onDelete={() => handleDeleteMessage(msg.id)}
+                  onDelete={() => deleteMsg(msg.id)}
                 />
               );
             })}
@@ -272,7 +351,7 @@ export default function ChatWindow({
         )}
       </div>
 
-      <ChatInput onSend={handleSend} disabled={loading} />
+      <ChatInput onSend={handleSend} disabled={loading || !ready} />
     </div>
   );
 }

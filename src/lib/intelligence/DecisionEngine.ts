@@ -4,8 +4,8 @@ import type { QueryAnalysis } from "@/lib/intelligence/QueryEngine";
 
 export interface DecisionResult {
   route: "model";
-  mode: "study" | "career";
-  responseStyle: "greeting" | "simple" | "teaching" | "career";
+  mode: "study" | "career" | "chat";
+  responseStyle: "greeting" | "simple" | "teaching" | "career" | "chat";
 }
 
 export function decideNextStep(analysis: QueryAnalysis): DecisionResult {
@@ -22,6 +22,14 @@ export function decideNextStep(analysis: QueryAnalysis): DecisionResult {
       route: "model",
       mode: "career",
       responseStyle: "career",
+    };
+  }
+
+  if (analysis.mode === "chat") {
+    return {
+      route: "model",
+      mode: "chat",
+      responseStyle: "chat",
     };
   }
 

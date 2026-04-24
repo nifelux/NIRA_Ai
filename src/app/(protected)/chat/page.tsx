@@ -1,6 +1,7 @@
 // src/app/(protected)/chat/page.tsx
 
 import ChatWindow from "@/components/chat/ChatWindow";
+import { resolveMode } from "@/lib/experience/ModeManager";
 
 export default async function ChatPage({
   searchParams,
@@ -8,7 +9,7 @@ export default async function ChatPage({
   searchParams: Promise<{ mode?: string }>;
 }) {
   const params = await searchParams;
-  const mode = params?.mode === "career" ? "career" : "study";
+  const mode = resolveMode(params?.mode);
 
   return <ChatWindow mode={mode} />;
 }

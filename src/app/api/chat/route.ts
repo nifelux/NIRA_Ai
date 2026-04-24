@@ -2,6 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { handleAIRequest } from "@/lib/ai/router";
+import { resolveMode } from "@/lib/experience/ModeManager";
 
 export async function POST(req: Request) {
   try {
@@ -11,7 +12,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "No message provided." }, { status: 400 });
     }
 
-    const resolvedMode = mode === "career" ? "career" : "study";
+    const resolvedMode = resolveMode(mode);
     const safeSessionId =
       typeof sessionId === "string" && sessionId.trim()
         ? sessionId.trim()
