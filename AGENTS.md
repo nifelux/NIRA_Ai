@@ -1,5 +1,10 @@
 <!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
+# NIRA_Ai Agent Guidelines
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+This is a standard Next.js 14+ app using the App Router.
+
+- Use `src/app/` for pages and layouts
+- Use TypeScript throughout
+- Run `npm run dev` to start the dev server
+- Run `npm run build` to check for type/build errors before committing
 <!-- END:nextjs-agent-rules -->
